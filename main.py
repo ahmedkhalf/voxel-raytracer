@@ -1,11 +1,11 @@
 import math
+import time
 from math import copysign, floor
 from typing import Iterator, Tuple
 
 import pygame
-
-
-TARGET_FPS = 15
+from pyvox.parser import VoxParser
+from tqdm import trange
 
 
 class VoxelRaycaster:
@@ -111,11 +111,50 @@ class VoxelRaycaster:
                     t_max_z += t_delta_z
 
 
+class Renderer:
+    def __init__(self, screen_size) -> None:
+        self.screen_weight, self.screen_height = screen_size
+
+        m1 = VoxParser("structure.vox").parse()
+        self.img = m1.to_dense_rgba()
+        self.size_x, self.size_y, self.size_z, _ = self.img.shape
+
+        self.raycaster = VoxelRaycaster(self.size_x, self.size_y, self.size_z)
+
+    def screen_to_world(self, x, y):
+        return (
+            (x / (self.screen_weight - 1)) * self.size_x,
+            (y / (self.screen_height - 1)) * self.size_y,
+        )
+
+    def get(self, x: int, y: int) -> Tuple[int, int, int]:
+        new_x, new_y = self.screen_to_world(x, y)
+        new_z = -5
+
+        origin = (new_x, new_y, new_z)
+        direction = (0, 0, 1)
+
+        for x, y, z, _ in self.raycaster.cast(origin, direction):
+            if x not in range(self.size_x):
+                continue
+            if y not in range(self.size_y):
+                continue
+            if z not in range(self.size_z):
+                continue
+
+            r, g, b, a = self.img[x, y, z]
+            if a == 255:
+                return r, g, b
+
+        return 0, 0, 0
+
+
 class App:
     def __init__(self):
         self._running = True
         self._display_surf = None
-        self.size = self.weight, self.height = 640, 400
+        self.size = self.width, self.height = 640, 400
+        self.renderer = Renderer(self.size)
 
     def on_init(self):
         pygame.init()
@@ -123,6 +162,15 @@ class App:
             self.size, pygame.HWSURFACE | pygame.DOUBLEBUF
         )
         self._running = True
+
+        # render the image
+        self._display_surf.fill((0, 0, 0))
+        start_time = time.time()
+        for x in trange(self.width):
+            for y in range(self.height):
+                color = self.renderer.get(x, y)
+                self._display_surf.set_at((x, y), color)
+        print("--- %s seconds to render ---" % (time.time() - start_time))
 
     def on_event(self, event):
         if event.type == pygame.QUIT:
@@ -132,7 +180,7 @@ class App:
         pass
 
     def on_render(self):
-        pass
+        pygame.display.flip()
 
     def on_cleanup(self):
         pygame.quit()
