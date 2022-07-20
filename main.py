@@ -1,6 +1,11 @@
-from typing import Iterator, Tuple
-from math import floor, copysign
 import math
+from math import copysign, floor
+from typing import Iterator, Tuple
+
+import pygame
+
+
+TARGET_FPS = 15
 
 
 class VoxelRaycaster:
@@ -104,3 +109,46 @@ class VoxelRaycaster:
                     if z == just_out_z:
                         return
                     t_max_z += t_delta_z
+
+
+class App:
+    def __init__(self):
+        self._running = True
+        self._display_surf = None
+        self.size = self.weight, self.height = 640, 400
+
+    def on_init(self):
+        pygame.init()
+        self._display_surf = pygame.display.set_mode(
+            self.size, pygame.HWSURFACE | pygame.DOUBLEBUF
+        )
+        self._running = True
+
+    def on_event(self, event):
+        if event.type == pygame.QUIT:
+            self._running = False
+
+    def on_loop(self):
+        pass
+
+    def on_render(self):
+        pass
+
+    def on_cleanup(self):
+        pygame.quit()
+
+    def on_execute(self):
+        if self.on_init() is False:
+            self._running = False
+
+        while self._running:
+            for event in pygame.event.get():
+                self.on_event(event)
+            self.on_loop()
+            self.on_render()
+        self.on_cleanup()
+
+
+if __name__ == "__main__":
+    theApp = App()
+    theApp.on_execute()
