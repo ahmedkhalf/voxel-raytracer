@@ -113,7 +113,7 @@ class VoxelRaycaster:
 
 class Renderer:
     def __init__(self, screen_size) -> None:
-        self.screen_weight, self.screen_height = screen_size
+        self.screen_width, self.screen_height = screen_size
 
         m1 = VoxParser("structure.vox").parse()
         self.img = m1.to_dense_rgba()
@@ -123,7 +123,7 @@ class Renderer:
 
     def screen_to_world(self, x, y):
         return (
-            (x / (self.screen_weight - 1)) * self.size_x,
+            (x / (self.screen_height - 1)) * self.size_x,
             (y / (self.screen_height - 1)) * self.size_y,
         )
 
@@ -155,6 +155,7 @@ class App:
         self._display_surf = None
         self.size = self.width, self.height = 640, 400
         self.renderer = Renderer(self.size)
+        self.fps_timer = pygame.time.Clock()
 
     def on_init(self):
         pygame.init()
@@ -181,6 +182,7 @@ class App:
 
     def on_render(self):
         pygame.display.flip()
+        self.fps_timer.tick(10)
 
     def on_cleanup(self):
         pygame.quit()
