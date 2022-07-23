@@ -76,8 +76,8 @@ class VoxelRaycaster:
             t_delta_y = math.inf
 
         if dir_z != 0:
-            t_max_z = (positive_step_z - (origin[1] - z)) / dir_z
-            t_delta_z = step_y / dir_z
+            t_max_z = (positive_step_z - (origin[2] - z)) / dir_z
+            t_delta_z = step_z / dir_z
         else:
             t_max_z = math.inf
             t_delta_z = math.inf
@@ -111,6 +111,26 @@ class VoxelRaycaster:
                     t_max_z += t_delta_z
 
 
+class Camera:
+    def __init__(self, screen_size, origin, direction) -> None:
+        self.screen_width, self.screen_height = screen_size
+        self.x, self.y, self.z = origin
+        self.dx, self.dy, self.dz = direction
+        self.fov = math.pi / 2  # field of view
+
+        # t = direction = (0, 0, 1)
+        # b = right direction = (1, 0, 0)
+        # v = up direction = (0, 1, 0)
+        gx = math.tan(self.fov / 2)
+        gy = gx * ((self.screen_height - 1) / (self.screen_width - 1))
+        self.qx = (2 * gx) / (self.screen_width - 1)  # * b
+        self.qy = (2 * gy) / (self.screen_height - 1)  # * v
+        self.p1m = (-gx, -gy, 1)
+
+    def get_ray(self, x, y):
+        return (self.p1m[0] + self.qx * x, self.p1m[1] + self.qy * y, self.p1m[2])
+
+
 class Renderer:
     def __init__(self, screen_size) -> None:
         self.screen_width, self.screen_height = screen_size
@@ -119,22 +139,13 @@ class Renderer:
         self.img = m1.to_dense_rgba()
         self.size_x, self.size_y, self.size_z, _ = self.img.shape
 
+        self.camera_origin = (self.size_x / 2, self.size_y / 2, -40)
+        self.camera = Camera(screen_size, self.camera_origin, (0, 0, 1))
         self.raycaster = VoxelRaycaster(self.size_x, self.size_y, self.size_z)
 
-    def screen_to_world(self, x, y):
-        return (
-            (x / (self.screen_height - 1)) * self.size_x,
-            (y / (self.screen_height - 1)) * self.size_y,
-        )
-
     def get(self, x: int, y: int) -> Tuple[int, int, int]:
-        new_x, new_y = self.screen_to_world(x, y)
-        new_z = -5
-
-        origin = (new_x, new_y, new_z)
-        direction = (0, 0, 1)
-
-        for x, y, z, _ in self.raycaster.cast(origin, direction):
+        direction = self.camera.get_ray(x, y)
+        for x, y, z, _ in self.raycaster.cast(self.camera_origin, direction):
             if x not in range(self.size_x):
                 continue
             if y not in range(self.size_y):
@@ -142,9 +153,8 @@ class Renderer:
             if z not in range(self.size_z):
                 continue
 
-            r, g, b, a = self.img[x, y, z]
-            if a == 255:
-                return r, g, b
+            if self.img[x, y, z, 3] == 255:
+                return self.img[x, y, z][0:3]
 
         return 0, 0, 0
 
@@ -153,15 +163,13 @@ class App:
     def __init__(self):
         self._running = True
         self._display_surf = None
-        self.size = self.width, self.height = 640, 400
+        self.size = self.width, self.height = int(640 * 1.5), int(400 * 1.5)
         self.renderer = Renderer(self.size)
         self.fps_timer = pygame.time.Clock()
 
     def on_init(self):
         pygame.init()
-        self._display_surf = pygame.display.set_mode(
-            self.size, pygame.HWSURFACE | pygame.DOUBLEBUF
-        )
+        self._display_surf = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF)
         self._running = True
 
         # render the image
