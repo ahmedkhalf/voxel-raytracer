@@ -46,12 +46,11 @@ float random(inout uint rngState) {
 
 bool voxelPresent(ivec3 voxOrigin, out vec3 albedo) {
     ivec3 modelSize = models[0].size;
-    ivec3 origin = ivec3(round(voxOrigin));
-    if (origin.x >= modelSize.x || origin.y >= modelSize.y || origin.z >= modelSize.z || origin.x < 0 || origin.y < 0 || origin.z < 0) {
+    if (voxOrigin.x >= modelSize.x || voxOrigin.y >= modelSize.y || voxOrigin.z >= modelSize.z || voxOrigin.x < 0 || voxOrigin.y < 0 || voxOrigin.z < 0) {
         return false;
     }
 
-    vec4 voxel = data[origin.x + origin.y * modelSize.x + origin.z * modelSize.x * modelSize.y];
+    vec4 voxel = data[voxOrigin.x + voxOrigin.y * modelSize.x + voxOrigin.z * modelSize.x * modelSize.y];
     albedo = voxel.xyz;
     return voxel.a > 0;
 }
@@ -209,7 +208,7 @@ vec3 get_color() {
 
     HitRecord rec;
     for (int d = 0; d < MAX_DEPTH; d++) {
-        if (voxelMarch(ray, rec)) {
+        if (worldHit(ray, rec)) {
             vec3 scatter_dir = rec.normal + random_unit_vector();
 
             // handle scatter_dir near zero case

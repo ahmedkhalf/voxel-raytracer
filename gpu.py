@@ -3,11 +3,10 @@ import numpy as np
 from PIL import Image
 from midvoxio.voxio import vox_to_arr
 import time
+from pathlib import Path
 
 
-# filename = "chr_knight.vox"
-filename = "chr_sword.vox"
-# filename = "monu9.vox"
+filename = Path.cwd() / "resources" / "chr_knight.vox"
 arr = vox_to_arr(filename)
 arr = arr.swapaxes(1, 2)
 arr = arr[:, :, ::-1, :]
